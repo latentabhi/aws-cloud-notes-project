@@ -50,9 +50,14 @@ def init_db():
                     title VARCHAR(255) NOT NULL,
                     body TEXT,
                     file_url VARCHAR(500),
-                    added_on VARCHAR(50) NOT NULL
+                    added_on VARCHAR(50) NOT NULL,
+                    updated_on VARCHAR(50)
                 )
             """)
+            try:
+                cur.execute("ALTER TABLE notes ADD COLUMN updated_on VARCHAR(50)")
+            except Exception:
+                pass
         conn.close()
     else:
         conn = get_connection()
@@ -62,10 +67,15 @@ def init_db():
                 title TEXT NOT NULL,
                 body TEXT,
                 file_url TEXT,
-                added_on TEXT NOT NULL
+                added_on TEXT NOT NULL,
+                updated_on TEXT
             )
         """)
-        conn.commit()
+        try:
+            conn.execute("ALTER TABLE notes ADD COLUMN updated_on TEXT")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
         conn.close()
 
 
@@ -103,16 +113,16 @@ def insert_note(note_id, title, body, file_url, added_on):
         conn.close()
 
 
-def update_note(note_id, title, body, file_url=None):
+def update_note(note_id, title, body, file_url=None, updated_on=None):
     conn = get_connection()
     if file_url:
-        query = "UPDATE notes SET title = %s, body = %s, file_url = %s WHERE id = %s" if is_mysql() \
-            else "UPDATE notes SET title = ?, body = ?, file_url = ? WHERE id = ?"
-        params = (title, body, file_url, note_id)
+        query = "UPDATE notes SET title = %s, body = %s, file_url = %s, updated_on = %s WHERE id = %s" if is_mysql() \
+            else "UPDATE notes SET title = ?, body = ?, file_url = ?, updated_on = ? WHERE id = ?"
+        params = (title, body, file_url, updated_on, note_id)
     else:
-        query = "UPDATE notes SET title = %s, body = %s WHERE id = %s" if is_mysql() \
-            else "UPDATE notes SET title = ?, body = ? WHERE id = ?"
-        params = (title, body, note_id)
+        query = "UPDATE notes SET title = %s, body = %s, updated_on = %s WHERE id = %s" if is_mysql() \
+            else "UPDATE notes SET title = ?, body = ?, updated_on = ? WHERE id = ?"
+        params = (title, body, updated_on, note_id)
 
     if is_mysql():
         with conn.cursor() as cur:

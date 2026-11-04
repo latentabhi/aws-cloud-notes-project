@@ -67,7 +67,8 @@ def handle_single_note(note_id):
         filename = f"{note_id}_{uploaded_file.filename}"
         file_url = upload_attachment(uploaded_file, filename)
 
-    success = update_note(note_id, title, body, file_url)
+    updated_on = datetime.now().strftime("%d-%m-%Y %H:%M")
+    success = update_note(note_id, title, body, file_url, updated_on)
     if not success:
         return jsonify({"error": "Note not found"}), 404
 

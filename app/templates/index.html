@@ -287,7 +287,7 @@
                         <thead>
                             <tr>
                                 <th>Content</th>
-                                <th style="width: 140px;">Metadata</th>
+                                <th style="width: 160px;">Metadata</th>
                                 <th style="width: 110px;">Action</th>
                             </tr>
                         </thead>
@@ -330,9 +330,15 @@
                         var bodyHtml = item.body ? '<div class="note-body">' + escapeHtml(item.body) + '</div>' : '';
                         var fileHtml = item.file_url ? '<a class="attachment-link" href="' + item.file_url + '" target="_blank">Download Attachment</a>' : '';
 
+                        var metaHtml = '<div>Created: ' + escapeHtml(item.added_on) + '</div>';
+                        if (item.updated_on) {
+                            metaHtml += '<div>Updated: ' + escapeHtml(item.updated_on) + '</div>';
+                        }
+                        metaHtml += '<div>ID: ' + escapeHtml(item.id) + '</div>';
+
                         return '<tr>' +
                             '<td><div class="note-title">' + escapeHtml(item.title) + '</div>' + bodyHtml + fileHtml + '</td>' +
-                            '<td class="note-meta"><div>Date: ' + escapeHtml(item.added_on) + '</div><div>ID: ' + escapeHtml(item.id) + '</div></td>' +
+                            '<td class="note-meta">' + metaHtml + '</td>' +
                             '<td>' +
                                 '<button class="btn-edit" onclick="editNote(\'' + item.id + '\')">Edit</button>' +
                                 '<button class="btn-delete" onclick="deleteNote(\'' + item.id + '\')">Delete</button>' +
