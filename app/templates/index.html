@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -127,6 +126,21 @@
             cursor: not-allowed;
         }
 
+        button.btn-cancel {
+            background: none;
+            border: 1px solid #d5dbdb;
+            color: #555;
+            border-radius: 3px;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+        button.btn-cancel:hover {
+            background-color: #f0f0f0;
+        }
+
         .notes-table {
             width: 100%;
             border-collapse: collapse;
@@ -165,6 +179,22 @@
             font-size: 11px;
             color: #777;
             line-height: 1.4;
+        }
+
+        .btn-edit {
+            background: none;
+            border: 1px solid #d5dbdb;
+            color: #0073bb;
+            padding: 3px 8px;
+            font-size: 11px;
+            border-radius: 2px;
+            cursor: pointer;
+            margin-right: 4px;
+        }
+
+        .btn-edit:hover {
+            background-color: #f0f8ff;
+            border-color: #0073bb;
         }
 
         .btn-delete {
@@ -214,7 +244,6 @@
         }
     </style>
 </head>
-
 <body>
 
     <div class="container">
@@ -225,8 +254,10 @@
 
         <div class="row">
             <div class="col-form">
-                <h2>Add Note</h2>
+                <h2 id="formHeading">Add Note</h2>
                 <form id="noteForm">
+                    <input type="hidden" id="editIdInput" value="">
+
                     <div class="form-group">
                         <label for="titleInput">Title</label>
                         <input type="text" id="titleInput" name="title" required placeholder="Enter title">
@@ -234,8 +265,7 @@
 
                     <div class="form-group">
                         <label for="bodyInput">Details</label>
-                        <textarea id="bodyInput" name="body" rows="4"
-                            placeholder="Enter notes or description"></textarea>
+                        <textarea id="bodyInput" name="body" rows="4" placeholder="Enter notes or description"></textarea>
                     </div>
 
                     <div class="form-group">
@@ -245,6 +275,7 @@
                     </div>
 
                     <button type="submit" id="submitBtn" class="btn-submit">Submit Note</button>
+                    <button type="button" id="cancelBtn" class="btn-cancel" style="display: none;" onclick="cancelEdit()">Cancel</button>
                 </form>
             </div>
 
@@ -257,7 +288,7 @@
                             <tr>
                                 <th>Content</th>
                                 <th style="width: 140px;">Metadata</th>
-                                <th style="width: 60px;">Action</th>
+                                <th style="width: 110px;">Action</th>
                             </tr>
                         </thead>
                         <tbody id="notesTableBody"></tbody>
@@ -268,6 +299,8 @@
     </div>
 
     <script>
+        var allNotes = [];
+
         function escapeHtml(str) {
             if (!str) return "";
             var div = document.createElement("div");
@@ -283,7 +316,9 @@
             fetch("/notes")
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
-                    if (!data || data.length === 0) {
+                    allNotes = data || [];
+
+                    if (!allNotes || allNotes.length === 0) {
                         statusMsg.innerText = "No records found.";
                         statusMsg.style.display = "block";
                         table.style.display = "none";
@@ -291,14 +326,17 @@
                     }
 
                     statusMsg.style.display = "none";
-                    tbody.innerHTML = data.map(function (item) {
+                    tbody.innerHTML = allNotes.map(function (item) {
                         var bodyHtml = item.body ? '<div class="note-body">' + escapeHtml(item.body) + '</div>' : '';
                         var fileHtml = item.file_url ? '<a class="attachment-link" href="' + item.file_url + '" target="_blank">Download Attachment</a>' : '';
 
                         return '<tr>' +
                             '<td><div class="note-title">' + escapeHtml(item.title) + '</div>' + bodyHtml + fileHtml + '</td>' +
                             '<td class="note-meta"><div>Date: ' + escapeHtml(item.added_on) + '</div><div>ID: ' + escapeHtml(item.id) + '</div></td>' +
-                            '<td><button class="btn-delete" onclick="deleteNote(\'' + item.id + '\')">Delete</button></td>' +
+                            '<td>' +
+                                '<button class="btn-edit" onclick="editNote(\'' + item.id + '\')">Edit</button>' +
+                                '<button class="btn-delete" onclick="deleteNote(\'' + item.id + '\')">Delete</button>' +
+                            '</td>' +
                             '</tr>';
                     }).join('');
 
@@ -310,30 +348,52 @@
                 });
         }
 
+        function editNote(id) {
+            var note = allNotes.find(function (n) { return n.id === id; });
+            if (!note) return;
+
+            document.getElementById("editIdInput").value = note.id;
+            document.getElementById("titleInput").value = note.title;
+            document.getElementById("bodyInput").value = note.body || "";
+            document.getElementById("formHeading").innerText = "Edit Note";
+            document.getElementById("submitBtn").innerText = "Update Note";
+            document.getElementById("cancelBtn").style.display = "inline-block";
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function cancelEdit() {
+            document.getElementById("noteForm").reset();
+            document.getElementById("editIdInput").value = "";
+            document.getElementById("formHeading").innerText = "Add Note";
+            document.getElementById("submitBtn").innerText = "Submit Note";
+            document.getElementById("cancelBtn").style.display = "none";
+        }
+
         document.getElementById("noteForm").onsubmit = function (e) {
             e.preventDefault();
             var submitBtn = document.getElementById("submitBtn");
             submitBtn.disabled = true;
             submitBtn.textContent = "Saving...";
 
+            var editId = document.getElementById("editIdInput").value;
+            var url = editId ? "/notes/" + encodeURIComponent(editId) : "/notes";
             var formData = new FormData(this);
 
-            fetch("/notes", {
+            fetch(url, {
                 method: "POST",
                 body: formData
             })
-                .then(function (res) { return res.json(); })
-                .then(function () {
-                    document.getElementById("noteForm").reset();
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = "Submit Note";
-                    loadNotes();
-                })
-                .catch(function () {
-                    alert("Failed to save note.");
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = "Submit Note";
-                });
+            .then(function (res) { return res.json(); })
+            .then(function () {
+                cancelEdit();
+                submitBtn.disabled = false;
+                loadNotes();
+            })
+            .catch(function () {
+                alert("Failed to save note.");
+                submitBtn.disabled = false;
+                submitBtn.textContent = editId ? "Update Note" : "Submit Note";
+            });
         };
 
         function deleteNote(noteId) {
@@ -341,20 +401,23 @@
                 return;
             }
 
+            if (document.getElementById("editIdInput").value === noteId) {
+                cancelEdit();
+            }
+
             fetch("/notes/" + encodeURIComponent(noteId), {
                 method: "DELETE"
             })
-                .then(function (res) { return res.json(); })
-                .then(function () {
-                    loadNotes();
-                })
-                .catch(function () {
-                    alert("Error deleting note.");
-                });
+            .then(function (res) { return res.json(); })
+            .then(function () {
+                loadNotes();
+            })
+            .catch(function () {
+                alert("Error deleting note.");
+            });
         }
 
         loadNotes();
     </script>
 </body>
-
 </html>

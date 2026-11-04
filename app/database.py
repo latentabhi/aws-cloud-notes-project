@@ -103,6 +103,32 @@ def insert_note(note_id, title, body, file_url, added_on):
         conn.close()
 
 
+def update_note(note_id, title, body, file_url=None):
+    conn = get_connection()
+    if file_url:
+        query = "UPDATE notes SET title = %s, body = %s, file_url = %s WHERE id = %s" if is_mysql() \
+            else "UPDATE notes SET title = ?, body = ?, file_url = ? WHERE id = ?"
+        params = (title, body, file_url, note_id)
+    else:
+        query = "UPDATE notes SET title = %s, body = %s WHERE id = %s" if is_mysql() \
+            else "UPDATE notes SET title = ?, body = ? WHERE id = ?"
+        params = (title, body, note_id)
+
+    if is_mysql():
+        with conn.cursor() as cur:
+            cur.execute(query, params)
+            updated = cur.rowcount > 0
+        conn.close()
+        return updated
+
+    cur = conn.cursor()
+    cur.execute(query, params)
+    updated = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return updated
+
+
 def remove_note(note_id):
     conn = get_connection()
     if is_mysql():
